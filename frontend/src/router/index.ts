@@ -27,16 +27,20 @@ const router = createRouter({
           meta: { title: '任务详情' }
         },
         {
-          path: '/debug',
-          name: 'Debug',
-          component: () => import('@/views/Debug.vue'),
-          meta: { title: '样本调试' }
+          path: '/evaluation',
+          name: 'Evaluation',
+          component: () => import('@/views/Evaluation.vue'),
+          meta: { title: '单条评估' }
         },
         {
           path: '/compare',
           name: 'Compare',
           component: () => import('@/views/Compare.vue'),
           meta: { title: '版本对比' }
+        },
+        {
+          path: '/debug',
+          redirect: '/evaluation'
         }
       ]
     }

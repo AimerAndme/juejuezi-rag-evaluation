@@ -3,7 +3,10 @@
     <!-- 统计卡片 -->
     <div class="stat-cards">
       <el-card class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+        <div
+          class="stat-icon"
+          style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+        >
           <el-icon :size="32"><List /></el-icon>
         </div>
         <div class="stat-content">
@@ -13,7 +16,10 @@
       </el-card>
 
       <el-card class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)">
+        <div
+          class="stat-icon"
+          style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
+        >
           <el-icon :size="32"><Loading /></el-icon>
         </div>
         <div class="stat-content">
@@ -23,7 +29,10 @@
       </el-card>
 
       <el-card class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)">
+        <div
+          class="stat-icon"
+          style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"
+        >
           <el-icon :size="32"><SuccessFilled /></el-icon>
         </div>
         <div class="stat-content">
@@ -33,7 +42,10 @@
       </el-card>
 
       <el-card class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%)">
+        <div
+          class="stat-icon"
+          style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%)"
+        >
           <el-icon :size="32"><TrendCharts /></el-icon>
         </div>
         <div class="stat-content">
@@ -48,9 +60,7 @@
       <template #header>
         <div class="card-header">
           <span>最近任务</span>
-          <el-button text type="primary" @click="$router.push('/tasks')">
-            查看全部 →
-          </el-button>
+          <el-button text type="primary" @click="$router.push('/tasks')"> 查看全部 → </el-button>
         </div>
       </template>
 
@@ -68,7 +78,9 @@
             <div v-if="row.metrics" class="metrics-preview">
               <el-tag size="small">F: {{ (row.metrics.faithfulness * 100).toFixed(0) }}%</el-tag>
               <el-tag size="small">R: {{ (row.metrics.context_recall * 100).toFixed(0) }}%</el-tag>
-              <el-tag size="small">P: {{ (row.metrics.context_precision * 100).toFixed(0) }}%</el-tag>
+              <el-tag size="small"
+                >P: {{ (row.metrics.context_precision * 100).toFixed(0) }}%</el-tag
+              >
             </div>
             <span v-else>-</span>
           </template>
@@ -92,9 +104,9 @@
           <el-icon :size="40" color="#1E40AF"><List /></el-icon>
           <span>查看任务</span>
         </div>
-        <div class="action-item" @click="$router.push('/debug')">
+        <div class="action-item" @click="$router.push('/evaluation')">
           <el-icon :size="40" color="#1E40AF"><Tools /></el-icon>
-          <span>样本调试</span>
+          <span>单条评估</span>
         </div>
         <div class="action-item" @click="$router.push('/compare')">
           <el-icon :size="40" color="#1E40AF"><TrendCharts /></el-icon>
@@ -122,16 +134,23 @@ const completedCount = computed(() => {
   return taskStore.tasks.filter(t => t.status === 'completed').length
 })
 
-// 平均得分
+// 平均得分（5个指标平均）
 const avgScore = computed(() => {
   const completedTasks = taskStore.tasks.filter(t => t.status === 'completed' && t.metrics)
   if (completedTasks.length === 0) return '-'
-  
+
   const sum = completedTasks.reduce((acc, task) => {
-    const metrics = task.metrics!
-    return acc + (metrics.faithfulness + metrics.context_recall + metrics.context_precision) / 3
+    const m = task.metrics!
+    const values = [
+      m.faithfulness,
+      m.context_recall,
+      m.context_precision,
+      m.noise_sensitivity ?? 0,
+      m.answer_relevancy ?? 0
+    ].filter(v => v > 0)
+    return acc + (values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0)
   }, 0)
-  
+
   return `${((sum / completedTasks.length) * 100).toFixed(0)}%`
 })
 

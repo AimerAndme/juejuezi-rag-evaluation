@@ -25,11 +25,7 @@
         <!-- 检索上下文 -->
         <el-form-item label="检索上下文" required>
           <div class="contexts-container">
-            <div
-              v-for="(context, index) in debugForm.contexts"
-              :key="index"
-              class="context-item"
-            >
+            <div v-for="(context, index) in debugForm.contexts" :key="index" class="context-item">
               <el-input
                 v-model="debugForm.contexts[index]"
                 type="textarea"
@@ -71,68 +67,121 @@
             placeholder="请输入标准答案"
           />
         </el-form-item>
+
+        <!-- 指标开关 -->
+        <el-form-item label="评估指标">
+          <div class="metrics-switches">
+            <div
+              class="metric-switch"
+              :class="{ active: metricsConfig.faithfulness }"
+              @click="metricsConfig.faithfulness = !metricsConfig.faithfulness"
+            >
+              <el-icon><Check v-if="metricsConfig.faithfulness" /></el-icon>
+              <span>忠实度</span>
+            </div>
+            <div
+              class="metric-switch"
+              :class="{ active: metricsConfig.context_precision }"
+              @click="metricsConfig.context_precision = !metricsConfig.context_precision"
+            >
+              <el-icon><Check v-if="metricsConfig.context_precision" /></el-icon>
+              <span>上下文精确</span>
+            </div>
+            <div
+              class="metric-switch"
+              :class="{ active: metricsConfig.context_recall }"
+              @click="metricsConfig.context_recall = !metricsConfig.context_recall"
+            >
+              <el-icon><Check v-if="metricsConfig.context_recall" /></el-icon>
+              <span>上下文召回</span>
+            </div>
+            <div
+              class="metric-switch"
+              :class="{ active: metricsConfig.noise_sensitivity }"
+              @click="metricsConfig.noise_sensitivity = !metricsConfig.noise_sensitivity"
+            >
+              <el-icon><Check v-if="metricsConfig.noise_sensitivity" /></el-icon>
+              <span>噪声敏感度</span>
+            </div>
+            <div
+              class="metric-switch"
+              :class="{ active: metricsConfig.answer_relevancy }"
+              @click="metricsConfig.answer_relevancy = !metricsConfig.answer_relevancy"
+            >
+              <el-icon><Check v-if="metricsConfig.answer_relevancy" /></el-icon>
+              <span>回答相关性</span>
+            </div>
+          </div>
+        </el-form-item>
       </el-form>
     </el-card>
 
     <!-- 评估结果 -->
-    <el-card v-if="result" class="result-card">
+    <el-card v-if="scores" class="result-card">
       <template #header>
         <span>评估结果</span>
       </template>
 
       <div class="result-metrics">
-        <div class="result-item">
+        <div class="result-item" v-if="metricsConfig.faithfulness">
           <div class="result-label">忠实度 (Faithfulness)</div>
           <el-progress
-            :percentage="result.faithfulness * 100"
-            :color="getProgressColor(result.faithfulness)"
+            :percentage="(scores.faithfulness ?? 0) * 100"
+            :color="getProgressColor(scores.faithfulness ?? 0)"
           />
-          <div class="result-value">{{ (result.faithfulness * 100).toFixed(2) }}%</div>
+          <div class="result-value">{{ ((scores.faithfulness ?? 0) * 100).toFixed(2) }}%</div>
           <div class="result-desc">衡量模型回答与检索上下文的一致性，值越高说明回答越基于事实</div>
         </div>
 
-        <div class="result-item">
+        <div class="result-item" v-if="metricsConfig.context_recall">
           <div class="result-label">上下文召回 (Context Recall)</div>
           <el-progress
-            :percentage="result.context_recall * 100"
-            :color="getProgressColor(result.context_recall)"
+            :percentage="(scores.context_recall ?? 0) * 100"
+            :color="getProgressColor(scores.context_recall ?? 0)"
           />
-          <div class="result-value">{{ (result.context_recall * 100).toFixed(2) }}%</div>
+          <div class="result-value">{{ ((scores.context_recall ?? 0) * 100).toFixed(2) }}%</div>
           <div class="result-desc">衡量检索到的上下文包含标准答案的程度，值越高说明召回越完整</div>
         </div>
 
-        <div class="result-item">
+        <div class="result-item" v-if="metricsConfig.context_precision">
           <div class="result-label">上下文精确 (Context Precision)</div>
           <el-progress
-            :percentage="result.context_precision * 100"
-            :color="getProgressColor(result.context_precision)"
+            :percentage="(scores.context_precision ?? 0) * 100"
+            :color="getProgressColor(scores.context_precision ?? 0)"
           />
-          <div class="result-value">{{ (result.context_precision * 100).toFixed(2) }}%</div>
+          <div class="result-value">{{ ((scores.context_precision ?? 0) * 100).toFixed(2) }}%</div>
           <div class="result-desc">衡量检索到的上下文与问题的相关性，值越高说明检索越精准</div>
         </div>
 
-        <div class="result-item" v-if="result.answer_relevancy !== undefined">
+        <div class="result-item" v-if="metricsConfig.noise_sensitivity">
+          <div class="result-label">噪声敏感度 (Noise Sensitivity)</div>
+          <el-progress
+            :percentage="(scores['noise_sensitivity(mode=relevant)'] ?? 0) * 100"
+            :color="getProgressColor(scores['noise_sensitivity(mode=relevant)'] ?? 0)"
+          />
+          <div class="result-value">
+            {{ ((scores['noise_sensitivity(mode=relevant)'] ?? 0) * 100).toFixed(2) }}%
+          </div>
+          <div class="result-desc">衡量模型对无关信息的抗干扰能力，值越低说明抗干扰越强</div>
+        </div>
+
+        <div class="result-item" v-if="metricsConfig.answer_relevancy">
           <div class="result-label">回答相关性 (Answer Relevancy)</div>
           <el-progress
-            :percentage="result.answer_relevancy * 100"
-            :color="getProgressColor(result.answer_relevancy)"
+            :percentage="(scores.answer_relevancy ?? 0) * 100"
+            :color="getProgressColor(scores.answer_relevancy ?? 0)"
           />
-          <div class="result-value">{{ (result.answer_relevancy * 100).toFixed(2) }}%</div>
-          <div class="result-desc">衡量模型回答与用户问题的相关性，值越高说明回答越切题</div>
+          <div class="result-value">{{ ((scores.answer_relevancy ?? 0) * 100).toFixed(2) }}%</div>
+          <div class="result-desc">衡量模型回答与用户问题的相关程度，值越高说明回答越切题</div>
         </div>
       </div>
 
       <!-- 评分解释 -->
       <el-divider />
-      
+
       <div class="explanation-section">
         <h4>💡 评分说明</h4>
-        <el-alert
-          title="提示"
-          type="info"
-          :closable="false"
-          show-icon
-        >
+        <el-alert title="提示" type="info" :closable="false" show-icon>
           <template #default>
             <ul class="tips-list">
               <li><strong>优秀</strong>: 85% 以上</li>
@@ -148,13 +197,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { evaluationApi } from '@/api/evaluation'
-import type { EvaluationResult } from '@/types'
+import { useTaskStore } from '@/stores/task'
+import type { EvaluationResult, ScoreItem } from '@/types'
 
 const route = useRoute()
+const taskStore = useTaskStore()
 
 // 调试表单
 const debugForm = ref({
@@ -164,11 +215,25 @@ const debugForm = ref({
   reference: ''
 })
 
+// 指标开关配置
+const metricsConfig = ref({
+  faithfulness: true,
+  context_precision: true,
+  context_recall: true,
+  noise_sensitivity: true,
+  answer_relevancy: true
+})
+
 // 加载状态
 const loading = ref(false)
 
 // 评估结果
 const result = ref<EvaluationResult | null>(null)
+
+// 计算属性：获取第一条评分
+const scores = computed<ScoreItem | null>(() => {
+  return result.value?.scores?.[0] || null
+})
 
 /**
  * 添加上下文
@@ -193,7 +258,7 @@ const handleEvaluate = async () => {
     ElMessage.warning('请输入用户问题')
     return
   }
-  if (!debugForm.value.contexts.some(c => c.trim())) {
+  if (!debugForm.value.contexts.some((c: string) => c.trim())) {
     ElMessage.warning('请至少输入一个上下文')
     return
   }
@@ -212,12 +277,39 @@ const handleEvaluate = async () => {
     const response = await evaluationApi.evaluate({
       user_input: [debugForm.value.question],
       response: [debugForm.value.response],
-      retrieved_contexts: [debugForm.value.contexts.filter(c => c.trim())],
-      reference: [debugForm.value.reference]
+      retrieved_contexts: [debugForm.value.contexts.filter((c: string) => c.trim())],
+      reference: [debugForm.value.reference],
+      metrics_config: metricsConfig.value
     })
 
-    result.value = response as any
-    ElMessage.success('评估完成')
+    result.value = response as unknown as EvaluationResult
+
+    // 评估成功后保存任务
+    const scoreData = (response as unknown as EvaluationResult).scores?.[0]
+    if (scoreData) {
+      const inputData = {
+        user_input: debugForm.value.question,
+        response: debugForm.value.response,
+        retrieved_contexts: debugForm.value.contexts.filter((c: string) => c.trim()),
+        reference: debugForm.value.reference
+      }
+      await taskStore.createTask({
+        name: `评估任务 - ${new Date().toLocaleString()}`,
+        description: debugForm.value.question.slice(0, 50),
+        dataset: '单条评估',
+        status: 'completed',
+        metrics: {
+          faithfulness: scoreData.faithfulness,
+          context_precision: scoreData.context_precision,
+          context_recall: scoreData.context_recall,
+          noise_sensitivity: scoreData['noise_sensitivity(mode=relevant)'],
+          answer_relevancy: scoreData.answer_relevancy
+        },
+        input: inputData
+      })
+    }
+
+    ElMessage.success('评估完成，已保存到任务列表')
   } catch (error) {
     ElMessage.error('评估失败，请检查输入')
   } finally {
@@ -293,6 +385,42 @@ onMounted(() => {
 
 .context-item .el-input {
   flex: 1;
+}
+
+.metrics-switches {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.metric-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  color: #6b7280;
+  background: #ffffff;
+  user-select: none;
+}
+
+.metric-switch:hover {
+  border-color: #93c5fd;
+  color: #3b82f6;
+}
+
+.metric-switch.active {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: #ffffff;
+}
+
+.metric-switch .el-icon {
+  font-size: 14px;
 }
 
 /* 评估结果 */

@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from datasets import Dataset
 from typing import List
@@ -6,8 +7,7 @@ from evaluation.tool import evaluate_ragas
 from fastapi.openapi.docs import get_swagger_ui_html
 # 有时会这样使用
 from fastapi import applications
-
-
+import uvicorn
 def swagger_monkey_patch(*args, **kwargs):
     """
     覆盖生成 /docs 端点 HTML 时的默认值，
@@ -25,14 +25,33 @@ def swagger_monkey_patch(*args, **kwargs):
 applications.get_swagger_ui_html = swagger_monkey_patch
 app = FastAPI()
 
+# CORS 配置
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+class MetricsConfig(BaseModel):
+    """ 指标开关配置 """
+    faithfulness: bool = Field(True, description="是否评估忠实度")
+    context_precision: bool = Field(True, description="是否评估上下文精确度")
+    context_recall: bool = Field(True, description="是否评估上下文召回率")
+    noise_sensitivity: bool = Field(True, description="是否评估噪声敏感度")
+    answer_relevancy: bool = Field(True, description="是否评估回答相关性")
+
 
 class EvaluationData(BaseModel):
     user_input: List[str] = Field(..., description="用户问题列表")
     response: List[str] = Field(..., description="RAG生成的回答列表")
     retrieved_contexts: List[List[str]] = Field(..., description="检索到的上下文列表（二维数组）")
     reference: List[str] = Field(..., description="标准答案列表")
+    metrics_config: MetricsConfig = Field(default_factory=MetricsConfig, description="指标开关配置")
 
-    class Config:
+    class ConfigDict:
         json_schema_extra = {
             "example": {
                 "user_input": ["Who is the most popular singer in China?"],
@@ -44,16 +63,27 @@ class EvaluationData(BaseModel):
 
 
 @app.post("/rag/evaluation")
-async def evaluate(data: EvaluationData):
+def evaluate(data: EvaluationData):
     """
     RAG评估接口
     
     接收评估数据，返回 faithfulness、context_precision、context_recall 等指标
     """
-    # 将 Pydantic 模型转换为字典，再转换为 Dataset
-    dataset = Dataset.from_dict(data.model_dump())
+    data_dict = data.model_dump()
+    ragas_data = {
+        "question": data_dict["user_input"],
+        "answer": data_dict["response"],
+        "contexts": data_dict["retrieved_contexts"],
+        "ground_truth": data_dict["reference"]
+    }
+    dataset = Dataset.from_dict(ragas_data)
 
-    # 执行评估
-    result = evaluate_ragas(dataset)
+    # 传递指标配置
+    metrics_config = data.metrics_config.model_dump()
+    result = evaluate_ragas(dataset, metrics_config)
 
     return result
+
+# 仅当直接运行此文件时才启动服务器
+if __name__ == "__main__":
+    uvicorn.run("api:app", host="127.0.0.1", port=8000, reload=True)

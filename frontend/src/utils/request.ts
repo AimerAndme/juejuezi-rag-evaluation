@@ -8,7 +8,7 @@ let requestCount = 0
 // 创建 Axios 实例
 const service: AxiosInstance = axios.create({
   baseURL: 'http://localhost:8000',
-  timeout: 30000,
+  timeout: 900000,
   headers: {
     'Content-Type': 'application/json'
   }

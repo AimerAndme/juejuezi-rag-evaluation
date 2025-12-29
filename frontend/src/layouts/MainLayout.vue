@@ -21,9 +21,9 @@
           <el-icon><List /></el-icon>
           <span>评估任务</span>
         </el-menu-item>
-        <el-menu-item index="/debug">
+        <el-menu-item index="/evaluation">
           <el-icon><Tools /></el-icon>
-          <span>样本调试</span>
+          <span>单条评估</span>
         </el-menu-item>
         <el-menu-item index="/compare">
           <el-icon><TrendCharts /></el-icon>
@@ -160,7 +160,7 @@ const handleSubmitTask = async () => {
 
     ElMessage.success('任务创建成功')
     createDialogVisible.value = false
-    
+
     // 跳转到任务详情页
     router.push(`/tasks/${newTask.id}`)
   } catch (error) {

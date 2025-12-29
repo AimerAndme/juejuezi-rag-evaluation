@@ -36,9 +36,9 @@
             <div class="task-desc">{{ row.description }}</div>
           </template>
         </el-table-column>
-        
+
         <el-table-column prop="dataset" label="数据集" width="180" />
-        
+
         <el-table-column prop="status" label="状态" width="120">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">
@@ -47,12 +47,18 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="评估指标" width="300">
+        <el-table-column label="评估指标" width="450">
           <template #default="{ row }">
             <div v-if="row.metrics" class="metrics-preview">
-              <el-tag>忠实度: {{ (row.metrics.faithfulness * 100).toFixed(1) }}%</el-tag>
-              <el-tag>召回: {{ (row.metrics.context_recall * 100).toFixed(1) }}%</el-tag>
-              <el-tag>精确: {{ (row.metrics.context_precision * 100).toFixed(1) }}%</el-tag>
+              <el-tag>忠实度: {{ ((row.metrics.faithfulness ?? 0) * 100).toFixed(1) }}%</el-tag>
+              <el-tag>召回: {{ ((row.metrics.context_recall ?? 0) * 100).toFixed(1) }}%</el-tag>
+              <el-tag>精确: {{ ((row.metrics.context_precision ?? 0) * 100).toFixed(1) }}%</el-tag>
+              <el-tag v-if="row.metrics.noise_sensitivity"
+                >噪声: {{ (row.metrics.noise_sensitivity * 100).toFixed(1) }}%</el-tag
+              >
+              <el-tag v-if="row.metrics.answer_relevancy"
+                >相关: {{ (row.metrics.answer_relevancy * 100).toFixed(1) }}%</el-tag
+              >
             </div>
             <span v-else class="text-secondary">-</span>
           </template>

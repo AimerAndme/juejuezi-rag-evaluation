@@ -28,6 +28,17 @@
 
     <!-- Tab 切换 -->
     <el-card class="tab-card">
+      <!-- 数据来源提示 -->
+      <el-alert
+        title="数据存储说明"
+        type="info"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 16px"
+      >
+        当前任务数据存储在浏览器 localStorage 中，清除浏览器数据后将重置。
+      </el-alert>
+
       <el-tabs v-model="activeTab">
         <!-- 指标总览 -->
         <el-tab-pane label="指标总览" name="metrics">
@@ -36,34 +47,42 @@
             <div class="metric-cards">
               <div class="metric-card">
                 <div class="metric-value">
-                  {{ (taskStore.currentTask?.metrics?.faithfulness * 100 || 0).toFixed(1) }}%
+                  {{ ((taskStore.currentTask?.metrics?.faithfulness ?? 0) * 100).toFixed(1) }}%
                 </div>
                 <div class="metric-label">忠实度 (Faithfulness)</div>
                 <div class="metric-desc">模型回答与检索上下文的一致性</div>
               </div>
-              
+
               <div class="metric-card">
                 <div class="metric-value">
-                  {{ (taskStore.currentTask?.metrics?.context_recall * 100 || 0).toFixed(1) }}%
+                  {{ ((taskStore.currentTask?.metrics?.context_recall ?? 0) * 100).toFixed(1) }}%
                 </div>
                 <div class="metric-label">上下文召回 (Context Recall)</div>
                 <div class="metric-desc">检索到的上下文包含答案的程度</div>
               </div>
-              
+
               <div class="metric-card">
                 <div class="metric-value">
-                  {{ (taskStore.currentTask?.metrics?.context_precision * 100 || 0).toFixed(1) }}%
+                  {{ ((taskStore.currentTask?.metrics?.context_precision ?? 0) * 100).toFixed(1) }}%
                 </div>
                 <div class="metric-label">上下文精确 (Context Precision)</div>
                 <div class="metric-desc">检索到的上下文与问题的相关性</div>
               </div>
-              
+
               <div class="metric-card">
                 <div class="metric-value">
-                  {{ (taskStore.currentTask?.metrics?.answer_relevancy * 100 || 0).toFixed(1) }}%
+                  {{ ((taskStore.currentTask?.metrics?.noise_sensitivity ?? 0) * 100).toFixed(1) }}%
+                </div>
+                <div class="metric-label">噪声敏感度 (Noise Sensitivity)</div>
+                <div class="metric-desc">模型对无关信息的抗干扰能力</div>
+              </div>
+
+              <div class="metric-card">
+                <div class="metric-value">
+                  {{ ((taskStore.currentTask?.metrics?.answer_relevancy ?? 0) * 100).toFixed(1) }}%
                 </div>
                 <div class="metric-label">回答相关性 (Answer Relevancy)</div>
-                <div class="metric-desc">模型回答与用户问题的相关性</div>
+                <div class="metric-desc">模型回答与用户问题的相关程度</div>
               </div>
             </div>
 
@@ -83,9 +102,19 @@
         <el-tab-pane label="样本列表" name="samples">
           <el-table :data="taskStore.currentSamples" style="width: 100%">
             <el-table-column type="index" label="序号" width="60" />
-            <el-table-column prop="user_input" label="用户问题" min-width="200" show-overflow-tooltip />
-            <el-table-column prop="response" label="模型回答" min-width="200" show-overflow-tooltip />
-            
+            <el-table-column
+              prop="user_input"
+              label="用户问题"
+              min-width="200"
+              show-overflow-tooltip
+            />
+            <el-table-column
+              prop="response"
+              label="模型回答"
+              min-width="200"
+              show-overflow-tooltip
+            />
+
             <el-table-column label="指标" width="300">
               <template #default="{ row }">
                 <div v-if="row.metrics" class="sample-metrics">
@@ -115,9 +144,7 @@
         <el-tab-pane label="版本对比" name="compare">
           <div class="compare-placeholder">
             <el-empty description="请选择对比版本">
-              <el-button type="primary" @click="$router.push('/compare')">
-                前往对比页面
-              </el-button>
+              <el-button type="primary" @click="$router.push('/compare')"> 前往对比页面 </el-button>
             </el-empty>
           </div>
         </el-tab-pane>
@@ -187,9 +214,9 @@ const initRadarChart = () => {
   if (!radarChartRef.value) return
 
   radarChart = echarts.init(radarChartRef.value)
-  
+
   const metrics = taskStore.currentTask?.metrics
-  
+
   const option = {
     title: {
       text: '评估指标雷达图',
@@ -207,6 +234,7 @@ const initRadarChart = () => {
         { name: '忠实度', max: 1 },
         { name: '上下文召回', max: 1 },
         { name: '上下文精确', max: 1 },
+        { name: '噪声敏感度', max: 1 },
         { name: '回答相关性', max: 1 }
       ],
       radius: '60%'
@@ -220,6 +248,7 @@ const initRadarChart = () => {
               metrics?.faithfulness || 0,
               metrics?.context_recall || 0,
               metrics?.context_precision || 0,
+              metrics?.noise_sensitivity || 0,
               metrics?.answer_relevancy || 0
             ],
             name: '评估指标',
@@ -237,7 +266,7 @@ const initRadarChart = () => {
       }
     ]
   }
-  
+
   radarChart.setOption(option)
 }
 
@@ -248,9 +277,9 @@ const initBarChart = () => {
   if (!barChartRef.value) return
 
   barChart = echarts.init(barChartRef.value)
-  
+
   const metrics = taskStore.currentTask?.metrics
-  
+
   const option = {
     title: {
       text: '评估指标对比',
@@ -278,10 +307,10 @@ const initBarChart = () => {
     },
     xAxis: {
       type: 'category',
-      data: ['忠实度', '上下文召回', '上下文精确', '回答相关性'],
+      data: ['忠实度', '上下文召回', '上下文精确', '噪声敏感度', '回答相关性'],
       axisLabel: {
         interval: 0,
-        rotate: 0
+        rotate: 15
       }
     },
     yAxis: {
@@ -298,6 +327,7 @@ const initBarChart = () => {
           metrics?.faithfulness || 0,
           metrics?.context_recall || 0,
           metrics?.context_precision || 0,
+          metrics?.noise_sensitivity || 0,
           metrics?.answer_relevancy || 0
         ],
         itemStyle: {
@@ -308,7 +338,7 @@ const initBarChart = () => {
       }
     ]
   }
-  
+
   barChart.setOption(option)
 }
 
@@ -318,7 +348,7 @@ const initBarChart = () => {
 const viewSampleDetail = (row: any) => {
   // 跳转到调试页面，携带样本数据
   router.push({
-    path: '/debug',
+    path: '/evaluation',
     query: {
       sample: JSON.stringify(row)
     }
@@ -343,7 +373,7 @@ watch(
 /**
  * 监听 Tab 切换
  */
-watch(activeTab, (newTab) => {
+watch(activeTab, newTab => {
   if (newTab === 'metrics') {
     nextTick(() => {
       initRadarChart()
@@ -359,7 +389,7 @@ watch(activeTab, (newTab) => {
 onMounted(async () => {
   const taskId = route.params.id as string
   await taskStore.fetchTaskDetail(taskId)
-  
+
   // 默认加载指标图表
   nextTick(() => {
     initRadarChart()
@@ -432,7 +462,7 @@ export default {
 
 .metric-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
 }
 

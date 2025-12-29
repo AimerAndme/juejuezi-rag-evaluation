@@ -10,6 +10,16 @@ export interface EvaluationTask {
   updatedAt: string
   status: 'pending' | 'running' | 'completed' | 'failed'
   metrics?: TaskMetrics
+  /** 评估输入数据（用于复现） */
+  input?: EvaluationInput
+}
+
+/** 评估输入数据 */
+export interface EvaluationInput {
+  user_input: string
+  response: string
+  retrieved_contexts: string[]
+  reference: string
 }
 
 /** 任务指标 */
@@ -17,6 +27,7 @@ export interface TaskMetrics {
   faithfulness: number
   context_precision: number
   context_recall: number
+  noise_sensitivity?: number
   answer_relevancy?: number
 }
 
@@ -45,13 +56,33 @@ export interface EvaluationRequest {
   response: string[]
   retrieved_contexts: string[][]
   reference: string[]
+  /** 指标开关配置 */
+  metrics_config?: MetricsConfig
 }
 
-/** 评估结果 */
+/** 指标开关配置 */
+export interface MetricsConfig {
+  faithfulness?: boolean
+  context_precision?: boolean
+  context_recall?: boolean
+  noise_sensitivity?: boolean
+  answer_relevancy?: boolean
+}
+
+/** 评估结果（API 返回） */
 export interface EvaluationResult {
+  scores: ScoreItem[]
+  dataset?: any
+  traces?: any[]
+  ragas_traces?: Record<string, any>
+}
+
+/** 单条评分 */
+export interface ScoreItem {
   faithfulness: number
   context_precision: number
   context_recall: number
+  'noise_sensitivity(mode=relevant)'?: number
   answer_relevancy?: number
 }
 

@@ -1,54 +1,68 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { EvaluationTask, EvaluationSample } from '@/types'
 
+// localStorage key
+const STORAGE_KEY = 'rag_evaluation_tasks'
+
+// 默认示例数据
+const defaultTasks: EvaluationTask[] = [
+  {
+    id: '1',
+    name: '示例任务 1',
+    description: 'RAG 系统基础评估',
+    dataset: 'dataset_v1.json',
+    createdAt: '2024-12-20T10:00:00Z',
+    updatedAt: '2024-12-20T10:30:00Z',
+    status: 'completed',
+    metrics: {
+      faithfulness: 0.85,
+      context_precision: 0.78,
+      context_recall: 0.82
+    }
+  },
+  {
+    id: '2',
+    name: '示例任务 2',
+    description: 'RAG 系统优化后评估',
+    dataset: 'dataset_v2.json',
+    createdAt: '2024-12-21T14:00:00Z',
+    updatedAt: '2024-12-21T14:45:00Z',
+    status: 'completed',
+    metrics: {
+      faithfulness: 0.91,
+      context_precision: 0.84,
+      context_recall: 0.87
+    }
+  }
+]
+
 /**
- * 评估任务状态管理（Mock 数据）
- * 使用本地数据模拟任务管理功能
+ * 从 localStorage 加载任务
+ */
+const loadTasksFromStorage = (): EvaluationTask[] => {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY)
+    return data ? JSON.parse(data) : defaultTasks
+  } catch {
+    return defaultTasks
+  }
+}
+
+/**
+ * 保存任务到 localStorage
+ */
+const saveTasksToStorage = (tasks: EvaluationTask[]) => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks))
+}
+
+/**
+ * 评估任务状态管理
+ * 数据持久化到浏览器 localStorage
  */
 export const useTaskStore = defineStore('task', () => {
-  // Mock 任务列表
-  const tasks = ref<EvaluationTask[]>([
-    {
-      id: '1',
-      name: '示例任务 1',
-      description: 'RAG 系统基础评估',
-      dataset: 'dataset_v1.json',
-      createdAt: '2024-12-20T10:00:00Z',
-      updatedAt: '2024-12-20T10:30:00Z',
-      status: 'completed',
-      metrics: {
-        faithfulness: 0.85,
-        context_precision: 0.78,
-        context_recall: 0.82,
-        answer_relevancy: 0.88
-      }
-    },
-    {
-      id: '2',
-      name: '示例任务 2',
-      description: 'RAG 系统优化后评估',
-      dataset: 'dataset_v2.json',
-      createdAt: '2024-12-21T14:00:00Z',
-      updatedAt: '2024-12-21T14:45:00Z',
-      status: 'completed',
-      metrics: {
-        faithfulness: 0.91,
-        context_precision: 0.84,
-        context_recall: 0.87,
-        answer_relevancy: 0.92
-      }
-    },
-    {
-      id: '3',
-      name: '示例任务 3',
-      description: '进行中的评估任务',
-      dataset: 'dataset_v3.json',
-      createdAt: '2024-12-26T09:00:00Z',
-      updatedAt: '2024-12-26T09:00:00Z',
-      status: 'running'
-    }
-  ])
+  // 任务列表（从 localStorage 加载）
+  const tasks = ref<EvaluationTask[]>(loadTasksFromStorage())
 
   // 当前选中的任务
   const currentTask = ref<EvaluationTask | null>(null)
@@ -64,8 +78,7 @@ export const useTaskStore = defineStore('task', () => {
       metrics: {
         faithfulness: 0.92,
         context_precision: 0.88,
-        context_recall: 0.85,
-        answer_relevancy: 0.9
+        context_recall: 0.85
       }
     },
     {
@@ -77,8 +90,7 @@ export const useTaskStore = defineStore('task', () => {
       metrics: {
         faithfulness: 0.95,
         context_precision: 0.92,
-        context_recall: 0.88,
-        answer_relevancy: 0.94
+        context_recall: 0.88
       }
     }
   ])
@@ -87,35 +99,37 @@ export const useTaskStore = defineStore('task', () => {
   const loading = ref(false)
 
   /**
-   * 获取任务列表（Mock）
+   * 获取任务列表（从 localStorage 重新加载）
    */
   const fetchTasks = async () => {
     loading.value = true
-    await new Promise(resolve => setTimeout(resolve, 300))
+    await new Promise(resolve => setTimeout(resolve, 100))
+    // 重新从 localStorage 加载数据
+    tasks.value = loadTasksFromStorage()
     loading.value = false
   }
 
   /**
-   * 获取任务详情（Mock）
+   * 获取任务详情
    */
   const fetchTaskDetail = async (id: string) => {
     loading.value = true
-    await new Promise(resolve => setTimeout(resolve, 300))
+    await new Promise(resolve => setTimeout(resolve, 100))
     currentTask.value = tasks.value.find(t => t.id === id) || null
     loading.value = false
   }
 
   /**
-   * 获取任务样本（Mock）
+   * 获取任务样本
    */
-  const fetchTaskSamples = async (taskId: string) => {
+  const fetchTaskSamples = async (_taskId: string) => {
     loading.value = true
-    await new Promise(resolve => setTimeout(resolve, 300))
+    await new Promise(resolve => setTimeout(resolve, 100))
     loading.value = false
   }
 
   /**
-   * 创建任务（Mock）
+   * 创建任务
    */
   const createTask = async (data: Partial<EvaluationTask>) => {
     const newTask: EvaluationTask = {
@@ -125,14 +139,16 @@ export const useTaskStore = defineStore('task', () => {
       dataset: data.dataset || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      status: 'pending'
+      status: data.status || 'pending',
+      metrics: data.metrics,
+      input: data.input
     }
     tasks.value.unshift(newTask)
     return newTask
   }
 
   /**
-   * 更新任务（Mock）
+   * 更新任务
    */
   const updateTask = async (id: string, data: Partial<EvaluationTask>) => {
     const index = tasks.value.findIndex(t => t.id === id)
@@ -147,7 +163,7 @@ export const useTaskStore = defineStore('task', () => {
   }
 
   /**
-   * 删除任务（Mock）
+   * 删除任务
    */
   const deleteTask = async (id: string) => {
     tasks.value = tasks.value.filter(t => t.id !== id)
@@ -155,6 +171,15 @@ export const useTaskStore = defineStore('task', () => {
       currentTask.value = null
     }
   }
+
+  // 监听任务变化，自动保存到 localStorage
+  watch(
+    tasks,
+    newTasks => {
+      saveTasksToStorage(newTasks)
+    },
+    { deep: true }
+  )
 
   return {
     tasks,
