@@ -98,46 +98,40 @@
           </div>
         </el-tab-pane>
 
-        <!-- 样本列表 -->
-        <el-tab-pane label="样本列表" name="samples">
-          <el-table :data="taskStore.currentSamples" style="width: 100%">
-            <el-table-column type="index" label="序号" width="60" />
-            <el-table-column
-              prop="user_input"
-              label="用户问题"
-              min-width="200"
-              show-overflow-tooltip
-            />
-            <el-table-column
-              prop="response"
-              label="模型回答"
-              min-width="200"
-              show-overflow-tooltip
-            />
-
-            <el-table-column label="指标" width="300">
-              <template #default="{ row }">
-                <div v-if="row.metrics" class="sample-metrics">
-                  <el-progress
-                    :percentage="row.metrics.faithfulness * 100"
-                    :stroke-width="6"
-                    :show-text="false"
-                  />
-                  <span class="metric-text">
-                    F:{{ (row.metrics.faithfulness * 100).toFixed(0) }}%
-                  </span>
+        <!-- 评测内容复现 -->
+        <el-tab-pane label="评测复现" name="samples">
+          <div v-if="taskStore.currentTask?.input" class="reproduce-section">
+            <el-descriptions :column="1" border>
+              <el-descriptions-item label="用户问题">
+                {{ taskStore.currentTask.input.user_input }}
+              </el-descriptions-item>
+              <el-descriptions-item label="模型回答">
+                {{ taskStore.currentTask.input.response }}
+              </el-descriptions-item>
+              <el-descriptions-item label="检索上下文">
+                <div class="contexts-list">
+                  <el-tag
+                    v-for="(ctx, idx) in taskStore.currentTask.input.retrieved_contexts"
+                    :key="idx"
+                    class="context-tag"
+                  >
+                    {{ ctx }}
+                  </el-tag>
                 </div>
-              </template>
-            </el-table-column>
+              </el-descriptions-item>
+              <el-descriptions-item label="标准答案">
+                {{ taskStore.currentTask.input.reference }}
+              </el-descriptions-item>
+            </el-descriptions>
 
-            <el-table-column label="操作" width="100">
-              <template #default="{ row }">
-                <el-button link type="primary" size="small" @click="viewSampleDetail(row)">
-                  查看详情
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+            <div class="reproduce-actions">
+              <el-button type="primary" @click="reproduceEvaluation">
+                <el-icon><Refresh /></el-icon>
+                重新评测
+              </el-button>
+            </div>
+          </div>
+          <el-empty v-else description="暂无评测内容记录" />
         </el-tab-pane>
 
         <!-- 版本对比 -->
@@ -343,14 +337,21 @@ const initBarChart = () => {
 }
 
 /**
- * 查看样本详情
+ * 复现评测
  */
-const viewSampleDetail = (row: any) => {
-  // 跳转到调试页面，携带样本数据
+const reproduceEvaluation = () => {
+  const input = taskStore.currentTask?.input
+  if (!input) return
+
   router.push({
     path: '/evaluation',
     query: {
-      sample: JSON.stringify(row)
+      sample: JSON.stringify({
+        user_input: input.user_input,
+        response: input.response,
+        retrieved_contexts: input.retrieved_contexts,
+        reference: input.reference
+      })
     }
   })
 }
@@ -379,9 +380,6 @@ watch(activeTab, newTab => {
       initRadarChart()
       initBarChart()
     })
-  } else if (newTab === 'samples') {
-    const taskId = route.params.id as string
-    taskStore.fetchTaskSamples(taskId)
   }
 })
 
@@ -519,5 +517,31 @@ export default {
 
 .compare-placeholder {
   padding: 60px 0;
+}
+
+/* 评测复现 */
+.reproduce-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.contexts-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.context-tag {
+  max-width: 100%;
+  white-space: normal;
+  height: auto;
+  line-height: 1.5;
+  padding: 8px 12px;
+}
+
+.reproduce-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>
