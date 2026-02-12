@@ -97,3 +97,17 @@ export interface VersionCompare {
     metrics: TaskMetrics
   }
 }
+
+/** 问题库数据结构 */
+export interface QAQuestion {
+  id: string
+  query: string
+  reference: string
+  createdAt: string
+}
+
+/** 问答接口响应结构 */
+export interface QAResponse {
+  chatResult: string
+  retrievedDocuments: string[]
+}
